@@ -27,20 +27,24 @@ button{cursor:pointer}
 button.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
 button.sm{padding:4px 8px;font-size:.8rem}
 .tw{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto}
-table{width:100%;border-collapse:collapse;min-width:760px}
+table{width:100%;border-collapse:collapse;min-width:2000px}
 th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:.9rem}
 th{background:#fafbfd;color:var(--mut);font-weight:600;cursor:pointer;white-space:nowrap}
 tr:last-child td{border-bottom:0}
 .badge{padding:3px 9px;border-radius:99px;font-size:.78rem;font-weight:600;white-space:nowrap}
 .vigente{background:#e3f6ee;color:var(--ok)}.porvencer{background:#fff1d6;color:var(--warn)}.vencido{background:#fde4e4;color:var(--bad)}
 .empty{padding:30px;text-align:center;color:var(--mut)}
-dialog{border:0;border-radius:12px;padding:0;width:min(520px,94vw);box-shadow:0 10px 40px #0004}
+dialog{border:0;border-radius:12px;padding:0;width:min(780px,94vw);max-height:92vh;overflow:auto;box-shadow:0 10px 40px #0004}
 dialog::backdrop{background:#0006}
 form{padding:20px;display:grid;gap:12px}
 form h2{margin:0}
 label{display:grid;gap:4px;font-size:.85rem;color:var(--mut)}
 label input,label select,label textarea{color:var(--ink);font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:600px){.row,.row3{grid-template-columns:1fr}}
+.sinfecha{background:#eceff3;color:var(--mut)}
+.clv{cursor:pointer;font-family:monospace}
 .acts{display:flex;justify-content:flex-end;gap:8px}
 footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
 </style>
@@ -57,7 +61,7 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
 <main>
   <section class="stats" id="stats"></section>
   <div class="bar">
-    <input type="search" id="q" placeholder="Buscar por agencia, aplicación, N.º de licencia…">
+    <input type="search" id="q" placeholder="Buscar por software, serie, fabricante, proveedor, contrato…">
     <select id="fEstado">
       <option value="">Todos los estados</option>
       <option value="vigente">Vigente</option>
@@ -72,9 +76,7 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
   <div class="tw">
     <table>
       <thead><tr>
-        <th data-k="agencia">Agencia</th><th data-k="app">Aplicación</th><th data-k="tipo">Tipo</th>
-        <th data-k="num">N.º licencia</th><th data-k="usuarios">Usuarios</th>
-        <th data-k="fin">Vence</th><th>Estado</th><th></th>
+        <th data-k="nombre">Nombre del software</th><th data-k="serie">Serie</th><th data-k="fabricante">Fabricante</th><th data-k="cantidad">Cantidad</th><th data-k="anio">Año</th><th data-k="activacion">Fecha de activación</th><th data-k="tiempo">Tiempo de licencia</th><th data-k="vencimiento">Fecha de vencimiento</th><th data-k="contrato">Contrato asociado</th><th data-k="proveedor">Proveedor</th><th data-k="valorUnit">Valor unitario</th><th data-k="valorTotal">Valor total</th><th data-k="estado">Estado</th><th data-k="avencer">A vencer</th><th data-k="renovacion">Renovación</th><th data-k="nuevoContrato">Nuevo contrato</th><th>Claves</th><th></th>
       </tr></thead>
       <tbody id="tb"></tbody>
     </table>
@@ -86,23 +88,15 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
 <dialog id="dlg">
   <form id="frm" method="dialog">
     <h2 id="dTitle">Nueva licencia</h2>
-    <label>Agencia<input name="agencia" required></label>
-    <label>Aplicación / Software<input name="app" required></label>
-    <div class="row">
-      <label>Tipo
-        <select name="tipo"><option>Anual</option><option>Mensual</option><option>Perpetua</option><option>Suscripción</option><option>Otra</option></select>
-      </label>
-      <label>N.º de licencia<input name="num"></label>
-    </div>
-    <div class="row">
-      <label>Fecha de inicio<input type="date" name="inicio"></label>
-      <label>Fecha de vencimiento<input type="date" name="fin" required></label>
-    </div>
-    <div class="row">
-      <label>Usuarios / equipos<input type="number" name="usuarios" min="0" value="1"></label>
-      <label>Responsable<input name="resp"></label>
-    </div>
-    <label>Notas<textarea name="notas" rows="2"></textarea></label>
+    <label>Nombre del software<input name="nombre" required></label>
+    <div class="row"><label>Serie<input name="serie"></label><label>Fabricante<input name="fabricante"></label></div>
+    <div class="row3"><label>Cantidad<input type="number" name="cantidad" min="0" value="1"></label><label>Año<input type="number" name="anio" min="1990" max="2100"></label><label>Tiempo de licencia<input name="tiempo" placeholder="Ej. 12 meses"></label></div>
+    <div class="row"><label>Fecha de activación<input type="date" name="activacion"></label><label>Fecha de vencimiento<input type="date" name="vencimiento" required></label></div>
+    <div class="row"><label>Contrato asociado<input name="contrato"></label><label>Proveedor<input name="proveedor"></label></div>
+    <div class="row"><label>Valor unitario<input type="number" name="valorUnit" min="0" step="any"></label><label>Valor total (automático)<input id="vtot" readonly tabindex="-1"></label></div>
+    <div class="row"><label>Renovación<select name="renovacion"><option value=""></option><option>Sí</option><option>No</option><option>En proceso</option></select></label><label>Nuevo contrato<input name="nuevoContrato"></label></div>
+    <label>Claves<input name="claves" autocomplete="off"></label>
+    <p style="margin:0;font-size:.8rem;color:var(--mut)">El estado y “A vencer” se calculan solos con la fecha de vencimiento.</p>
     <div class="acts">
       <button type="button" id="btnCancel">Cancelar</button>
       <button class="pri" type="submit">Guardar</button>
@@ -116,40 +110,53 @@ const $=s=>document.querySelector(s);
 const me=await Auth.guard();
 if(me){
 const canEdit=Auth.can('lic');
-let data=[],sort={k:'fin',d:1},editId=null;
+let data=[],sort={k:'vencimiento',d:1},editId=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const aviso=t=>alert(t);
-function estado(l){
-  if(l.tipo==='Perpetua'&&!l.fin)return'vigente';
-  const d=Math.ceil((new Date(l.fin+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5);
-  return d<0?'vencido':d<=30?'porvencer':'vigente';
-}
-const lbl={vigente:'Vigente',porvencer:'Por vencer',vencido:'Vencido'};
+const NUM=['cantidad','anio','valorUnit','valorTotal','_d'];
+const dias=l=>l.vencimiento?Math.ceil((new Date(l.vencimiento+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5):null;
+function estado(l){const d=dias(l);return d===null?'sinfecha':d<0?'vencido':d<=30?'porvencer':'vigente'}
+const lbl={vigente:'Vigente',porvencer:'Por vencer',vencido:'Vencido',sinfecha:'Sin fecha'};
+const money=v=>v===''||v==null||isNaN(v)?'':Number(v).toLocaleString('es-CO');
+const total=l=>(Number(l.cantidad)||0)*(Number(l.valorUnit)||0);
+const venc=l=>{const d=dias(l);return d===null?'':d<0?'Vencida hace '+(-d)+' d':d===0?'Vence hoy':d+' días'};
 function render(){
   const q=$('#q').value.toLowerCase(),fe=$('#fEstado').value;
-  let rows=data.filter(l=>(!fe||estado(l)===fe)&&JSON.stringify(l).toLowerCase().includes(q));
-  rows.sort((a,b)=>String(a[sort.k]??'').localeCompare(String(b[sort.k]??''),'es',{numeric:true})*sort.d);
+  const k=sort.k==='estado'?'_e':sort.k==='avencer'?'_d':sort.k;
+  let rows=data.map(l=>({...l,valorTotal:total(l),_e:estado(l),_d:dias(l)??1e9})).filter(l=>(!fe||l._e===fe)&&JSON.stringify(l).toLowerCase().includes(q));
+  rows.sort((a,b)=>{const x=a[k]??'',y=b[k]??'';return (NUM.includes(k)?(Number(x)||0)-(Number(y)||0):String(x).localeCompare(String(y),'es',{numeric:true}))*sort.d});
   $('#tb').innerHTML=rows.map(l=>`<tr>
-    <td>${esc(l.agencia)}</td><td>${esc(l.app)}</td><td>${esc(l.tipo)}</td><td>${esc(l.num)}</td>
-    <td>${esc(l.usuarios)}</td><td>${esc(l.fin)}</td>
-    <td><span class="badge ${estado(l)}">${lbl[estado(l)]}</span></td>
+    <td>${esc(l.nombre)}</td><td>${esc(l.serie)}</td><td>${esc(l.fabricante)}</td><td>${esc(l.cantidad)}</td><td>${esc(l.anio)}</td>
+    <td>${esc(l.activacion)}</td><td>${esc(l.tiempo)}</td><td>${esc(l.vencimiento)}</td><td>${esc(l.contrato)}</td><td>${esc(l.proveedor)}</td>
+    <td>${money(l.valorUnit)}</td><td>${money(l.valorTotal)}</td>
+    <td><span class="badge ${l._e}">${lbl[l._e]}</span></td><td>${esc(venc(l))}</td>
+    <td>${esc(l.renovacion)}</td><td>${esc(l.nuevoContrato)}</td>
+    <td class="clv" data-v="${esc(l.claves)}" title="Clic para ver u ocultar">${l.claves?'••••••':''}</td>
     <td>${canEdit?`<button class="sm" data-edit="${l.id}">Editar</button> <button class="sm" data-del="${l.id}">Borrar</button>`:''}</td></tr>`).join('');
   $('#empty').hidden=rows.length>0;
-  const c={vigente:0,porvencer:0,vencido:0};data.forEach(l=>c[estado(l)]++);
+  const c={vigente:0,porvencer:0,vencido:0};data.forEach(l=>{const e=estado(l);if(e in c)c[e]++});
   $('#stats').innerHTML=`<div class="stat"><b>${data.length}</b><span>Total licencias</span></div>
    <div class="stat"><b style="color:var(--ok)">${c.vigente}</b><span>Vigentes</span></div>
    <div class="stat"><b style="color:var(--warn)">${c.porvencer}</b><span>Por vencer (≤30 días)</span></div>
    <div class="stat"><b style="color:var(--bad)">${c.vencido}</b><span>Vencidas</span></div>`;
+}
+function calc(e){
+  const f=$('#frm').elements;
+  $('#vtot').value=money(total({cantidad:f.cantidad.value,valorUnit:f.valorUnit.value}));
+  if(e.target.name==='activacion'&&f.activacion.value&&!f.anio.value)f.anio.value=f.activacion.value.slice(0,4);
 }
 function edit(id){
   if(!canEdit)return;
   editId=id;const l=data.find(x=>x.id===id)||{};
   $('#dTitle').textContent=id?'Editar licencia':'Nueva licencia';
   const f=$('#frm');f.reset();
-  for(const k of ['agencia','app','tipo','num','inicio','fin','usuarios','resp','notas'])if(l[k]!==undefined)f.elements[k].value=l[k];
+  for(const k of ['nombre','serie','fabricante','cantidad','anio','activacion','tiempo','vencimiento','contrato','proveedor','valorUnit','renovacion','nuevoContrato','claves'])if(l[k]!==undefined)f.elements[k].value=l[k];
+  calc({target:{}});
   $('#dlg').showModal();
 }
 $('#tb').onclick=async e=>{
+  const cv=e.target.closest('.clv');
+  if(cv&&cv.dataset.v){cv.textContent=cv.textContent==='••••••'?cv.dataset.v:'••••••';return}
   const b=e.target.closest('button');if(!b||!canEdit)return;
   if(b.dataset.edit)edit(b.dataset.edit);
   else if(b.dataset.del&&confirm('¿Eliminar esta licencia?')){
@@ -161,6 +168,7 @@ $('#btnNuevo').onclick=()=>edit(null);
 $('#btnCancel').onclick=()=>$('#dlg').close();
 $('#frm').onsubmit=async e=>{
   const o=Object.fromEntries(new FormData(e.target));
+  o.valorTotal=String(total(o));
   const l=editId?{...data.find(x=>x.id===editId),...o}:{...o,id:crypto.randomUUID()};
   try{
     await Auth.licencias.save(l);
@@ -168,11 +176,12 @@ $('#frm').onsubmit=async e=>{
     render();
   }catch(x){aviso('No se pudo guardar (¿sin permiso?).')}
 };
+$('#frm').oninput=calc;
 $('#q').oninput=render;$('#fEstado').onchange=render;
 document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
   sort=sort.k===th.dataset.k?{k:sort.k,d:-sort.d}:{k:th.dataset.k,d:1};render();
 });
-const cols=['agencia','app','tipo','num','inicio','fin','usuarios','resp','notas'];
+const cols=['nombre','serie','fabricante','cantidad','anio','activacion','tiempo','vencimiento','contrato','proveedor','valorUnit','valorTotal','renovacion','nuevoContrato','claves'];
 $('#btnCsv').onclick=()=>{
   const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
   const csv=[cols.join(',')].concat(data.map(l=>cols.map(c=>q(l[c])).join(','))).join('\n');
@@ -188,7 +197,7 @@ $('#fileImp').onchange=e=>{
     lines.forEach(ln=>{
       const v=[...ln.matchAll(/("([^"]|"")*"|[^,]*)(,|$)/g)].map(m=>m[1].replace(/^"|"$/g,'').replace(/""/g,'"')).slice(0,cols.length);
       const o={id:crypto.randomUUID()};cols.forEach((c,i)=>o[c]=v[i]||'');
-      if(o.agencia&&o.app&&o.fin)nuevos.push(o);
+      if(o.nombre&&o.vencimiento)nuevos.push(o);
     });
     try{await Auth.licencias.saveMany(nuevos);data=[...data,...nuevos];render()}
     catch(x){aviso('No se pudo importar (¿sin permiso?).')}
