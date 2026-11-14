@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nueva contraseña | Control Licenciamiento Agencia APP</title>
+<style>
+:root{--pri:#1f5eff;--ink:#1c2430;--mut:#6b7686;--line:#e2e7ee;--ok:#12805c;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,#1f5eff,#0b2a7a);color:var(--ink);padding:16px}
+.card{background:#fff;border-radius:14px;width:min(400px,100%);padding:28px;box-shadow:0 12px 40px #0004}
+h1{margin:0 0 6px;font-size:1.2rem;text-align:center}
+.sub{margin:0 0 16px;text-align:center;color:var(--mut);font-size:.88rem;word-break:break-all}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--mut);margin-bottom:12px}
+input{font:inherit;color:var(--ink);padding:10px;border:1px solid var(--line);border-radius:8px;width:100%}
+ul{list-style:none;margin:-4px 0 12px;padding:0;font-size:.8rem;color:var(--mut)}
+li::before{content:"○ "}li.ok{color:var(--ok)}li.ok::before{content:"● "}
+.go{width:100%;padding:11px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.msg{min-height:1.2em;margin-top:10px;text-align:center;font-size:.85rem;color:var(--bad)}
+.msg.ok{color:var(--ok)}
+a{color:var(--pri)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Elegir nueva contraseña</h1>
+  <p class="sub" id="sub">Verificando enlace…</p>
+  <form id="f" hidden novalidate>
+    <label>Nueva contraseña<input id="p" type="password" maxlength="8" autocomplete="new-password"></label>
+    <label>Confirmar contraseña<input id="p2" type="password" maxlength="8" autocomplete="new-password"></label>
+    <ul>
+      <li data-r="len">Exactamente 8 caracteres</li>
+      <li data-r="up">Una mayúscula</li>
+      <li data-r="lo">Una minúscula</li>
+      <li data-r="nu">Un número</li>
+      <li data-r="sp">Un símbolo especial (!@#$%&*…)</li>
+    </ul>
+    <button class="go" type="submit">Guardar contraseña</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <p style="text-align:center;margin:14px 0 0"><a href="login.html">Ir al ingreso</a></p>
+</div>
+<script type="module">
+import {Auth} from './auth.js';
+const $=s=>document.querySelector(s);
+const q=new URLSearchParams(location.search),code=q.get('oobCode');
+const msg=(t,ok)=>{$('#msg').textContent=t;$('#msg').className='msg'+(ok?' ok':'')};
+try{
+  if(q.get('mode')!=='resetPassword'||!code)throw 0;
+  $('#sub').textContent='Cuenta: '+await Auth.verifyReset(code);
+  $('#f').hidden=false;
+}catch(e){$('#sub').textContent='';msg('El enlace no es válido o ya venció. Solicita uno nuevo.')}
+$('#p').oninput=()=>{const p=$('#p').value;document.querySelectorAll('li').forEach(li=>li.classList.toggle('ok',Auth.checks[li.dataset.r](p)))};
+$('#f').onsubmit=async e=>{
+  e.preventDefault();
+  const p=$('#p').value;
+  if(!Auth.pwOk(p))return msg('La contraseña no cumple los requisitos.');
+  if(p!==$('#p2').value)return msg('Las contraseñas no coinciden.');
+  try{await Auth.confirmReset(code,p);$('#f').hidden=true;msg('Contraseña actualizada. Ya puedes ingresar.',true)}
+  catch(err){msg('No se pudo guardar. El enlace pudo vencer; solicita uno nuevo.')}
+};
+</script>
+</body>
+</html>
