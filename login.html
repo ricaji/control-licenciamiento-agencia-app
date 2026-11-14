@@ -69,7 +69,7 @@ try{
   boot=!(await Auth.initialized());
 }catch(e){msg('No se pudo conectar con el servidor.')}
 if(boot){
-  for(const s of ['#note','#lMail','#lNom','#c2','#rules'])$(s).hidden=false;
+  for(const s of ['#note','#rules'])$(s).hidden=false;
   $('#p').autocomplete='new-password';
   $('#go').textContent='Crear administrador inicial';$('#olv').hidden=true;
 }
@@ -90,11 +90,11 @@ $('#f').onsubmit=async e=>{
   b.disabled=true;msg('');
   try{
     if(boot){
-      const mail=$('#mail').value.trim();
-      if(!Auth.emailOk(mail))throw new Error('mail');
+      const mail=u+'@licenciamiento.app';
+      
       if(!Auth.pwOk(p))throw new Error('pw');
-      if(p!==$('#p2').value)throw new Error('pw2');
-      await Auth.bootstrap(u,mail,$('#nom').value.trim()||'Administrador',p);
+      
+      await Auth.bootstrap(u,mail,'Administrador',p);
     }else{
       if(!p)throw new Error('cred');
       await Auth.login(u,p);
