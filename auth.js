@@ -1,9 +1,10 @@
 /* Autenticación, roles y datos con Firebase (Auth + Firestore). Módulo compartido. */
 import {initializeApp,deleteApp} from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut,
-  sendPasswordResetEmail,verifyPasswordResetCode,confirmPasswordReset,deleteUser}
+  sendPasswordResetEmail,verifyPasswordResetCode,confirmPasswordReset,deleteUser,
+  getMultiFactorResolver,TotpMultiFactorGenerator,multiFactor,sendEmailVerification,verifyBeforeUpdateEmail}
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
-import {getFirestore,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,collection,writeBatch}
+import {getFirestore,doc,getDoc,getDocs,setDoc,updateDoc,deleteDoc,collection,writeBatch,deleteField}
   from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
 import {firebaseConfig} from './firebase-config.js';
 
@@ -49,20 +50,77 @@ const ready=new Promise(res=>{
 });
 
 const can=p=>!!ME&&ROLES[ME.rol].p.includes(p);
-async function guard(perm){
+const mfaOn=()=>!!auth.currentUser&&multiFactor(auth.currentUser).enrolledFactors.length>0;
+async function guard(perm,opts){
   const m=await ready;
   if(!m||(perm&&!can(perm))){location.replace(m?'index.html':'login.html');return null}
+  if(!(opts&&opts.setup)&&!mfaOn()){location.replace('seguridad.html');return null}
   return m;
 }
 async function initialized(){return (await getDoc(doc(db,'config','init'))).exists()}
 
+let PENDING=null;
+async function syncEmail(){
+  // Si el correo de Auth cambió (tras verificarlo), el administrador actualiza sus registros.
+  const u=auth.currentUser;
+  if(!ME||!u||!u.email||u.email===ME.email)return;
+  try{
+    await updateDoc(doc(db,'usuarios',u.uid),{email:u.email});
+    await updateDoc(doc(db,'cedulas',ME.cc),{email:u.email,emailNuevo:deleteField()});
+    ME.email=u.email;
+  }catch(e){}
+}
 async function login(cc,pw){
   const c=await getDoc(doc(db,'cedulas',cc));
   if(!c.exists())throw new Error('cred');
-  await signInWithEmailAndPassword(auth,c.data().email,pw);
+  const d=c.data(),mails=[d.email];
+  if(d.emailNuevo&&d.emailNuevo!==d.email)mails.push(d.emailNuevo);
+  let err=null;
+  for(const em of mails){
+    try{
+      await signInWithEmailAndPassword(auth,em,pw);err=null;break;
+    }catch(e){
+      if(e.code==='auth/multi-factor-auth-required'){PENDING=getMultiFactorResolver(auth,e);return {mfa:true}}
+      err=e;
+    }
+  }
+  if(err)throw err;
   const p=await loadProfile(auth.currentUser);
   if(!p)throw new Error('sinperfil');
+  await syncEmail();
   return p;
+}
+async function loginMfa(code){
+  if(!PENDING)throw new Error('cred');
+  const h=PENDING.hints.find(x=>x.factorId==='totp');
+  if(!h)throw new Error('cred');
+  const a=TotpMultiFactorGenerator.assertionForSignIn(h.uid,code);
+  await PENDING.resolveSignIn(a);PENDING=null;
+  const p=await loadProfile(auth.currentUser);
+  if(!p)throw new Error('sinperfil');
+  await syncEmail();
+  return p;
+}
+// Seguridad: correo verificado y enrolamiento del autenticador (TOTP)
+const isPlaceholder=e=>/@licenciamiento\.app$/i.test(e||'');
+const secState=()=>({email:auth.currentUser.email,verified:auth.currentUser.emailVerified,placeholder:isPlaceholder(auth.currentUser.email),mfa:mfaOn()});
+async function secRefresh(){await auth.currentUser.reload();await auth.currentUser.getIdToken(true);await syncEmail();return secState()}
+async function secSendVerify(newEmail){
+  const u=auth.currentUser;
+  if(newEmail&&newEmail!==u.email){
+    if(!emailOk(newEmail))throw new Error('mail');
+    if(can('usr_estado')&&ME){await updateDoc(doc(db,'cedulas',ME.cc),{emailNuevo:newEmail})}
+    await verifyBeforeUpdateEmail(u,newEmail);
+  }else await sendEmailVerification(u);
+}
+async function totpBegin(){
+  const u=auth.currentUser,ses=await multiFactor(u).getSession();
+  const secret=await TotpMultiFactorGenerator.generateSecret(ses);
+  return {secret,key:secret.secretKey,uri:secret.generateQrCodeUrl(u.email,'Licenciamiento_APP')};
+}
+async function totpFinish(secret,code){
+  const a=TotpMultiFactorGenerator.assertionForEnrollment(secret,code);
+  await multiFactor(auth.currentUser).enroll(a,'Autenticador');
 }
 const logout=async()=>{await signOut(auth);location.href='login.html'};
 
@@ -120,4 +178,4 @@ const licencias={
 };
 
 export const Auth={ROLES,checks,pwOk,ccOk,emailOk,genPass,ready,me:()=>ME,can,guard,initialized,
-  login,logout,bootstrap,createUser,sendReset,verifyReset,confirmReset,users,licencias};
+  login,loginMfa,secState,secRefresh,secSendVerify,totpBegin,totpFinish,logout,bootstrap,createUser,sendReset,verifyReset,confirmReset,users,licencias};
