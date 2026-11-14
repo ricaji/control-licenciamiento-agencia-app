@@ -1,0 +1,24 @@
+name: Avisos de licenciamiento
+on:
+  schedule:
+    - cron: '0 13 * * *'   # todos los dias 8:00 a.m. hora Colombia
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: 'Forzar envio (ignora dia y frecuencia)'
+        default: 'false'
+jobs:
+  avisos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save firebase-admin nodemailer
+      - run: node scripts/avisos.mjs
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          FORCE: ${{ github.event.inputs.forzar }}
