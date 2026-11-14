@@ -48,6 +48,10 @@ label input,label select,label textarea{color:var(--ink);font:inherit;padding:8p
 .clv{cursor:pointer;font-family:monospace}
 .acts{display:flex;justify-content:flex-end;gap:8px}
 footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
+.sem{display:inline-block;padding:2px 8px;border-radius:6px;font-weight:600}
+.sv{background:#d7f5df;color:#146c2e}
+.sa{background:#fff3c4;color:#8a6100}
+.sr{background:#fddcdc;color:#b42318}
 </style>
 </head>
 <body>
@@ -117,6 +121,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const aviso=t=>alert(t);
 const NUM=['cantidad','anio','valorUnit','valorTotal','_d'];
 const dias=l=>l.vencimiento?Math.ceil((new Date(l.vencimiento+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5):null;
+const sem=l=>{const d=dias(l);return d===null?'':d<90?'sr':d<=180?'sa':'sv'};
 function estado(l){const d=dias(l);return d===null?'sinfecha':d<0?'vencido':d<=30?'porvencer':'vigente'}
 const lbl={vigente:'Vigente',porvencer:'Por vencer',vencido:'Vencido',sinfecha:'Sin fecha'};
 const money=v=>v===''||v==null||isNaN(v)?'':Number(v).toLocaleString('es-CO');
@@ -128,7 +133,7 @@ function render(){
   let rows=data.map(l=>({...l,valorTotal:total(l),_e:estado(l),_d:dias(l)??1e9})).filter(l=>(!fe||l._e===fe)&&JSON.stringify(l).toLowerCase().includes(q));
   rows.sort((a,b)=>{const x=a[k]??'',y=b[k]??'';return (NUM.includes(k)?(Number(x)||0)-(Number(y)||0):String(x).localeCompare(String(y),'es',{numeric:true}))*sort.d});
   $('#tb').innerHTML=rows.map(l=>`<tr>
-    <td>${esc(l.nombre)}</td><td>${esc(l.serie)}</td><td>${esc(l.fabricante)}</td><td>${esc(l.cantidad)}</td><td>${esc(l.anio)}</td>
+    <td><span class="sem ${sem(l)}">${esc(l.nombre)}</span></td><td>${esc(l.serie)}</td><td>${esc(l.fabricante)}</td><td>${esc(l.cantidad)}</td><td>${esc(l.anio)}</td>
     <td>${esc(l.activacion)}</td><td>${esc(l.tiempo)}</td><td>${esc(l.vencimiento)}</td><td>${esc(l.contrato)}</td><td>${esc(l.proveedor)}</td>
     <td>${money(l.valorUnit)}</td><td>${money(l.valorTotal)}</td>
     <td><span class="badge ${l._e}">${lbl[l._e]}</span></td><td>${esc(venc(l))}</td>
