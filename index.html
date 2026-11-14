@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control Licenciamiento Agencia APP</title>
+
+<style>
+:root{--bg:#f5f7fa;--card:#fff;--ink:#1c2430;--mut:#6b7686;--line:#e2e7ee;--pri:#1f5eff;--ok:#12805c;--warn:#b26a00;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--pri);color:#fff;padding:20px 24px}
+header h1{margin:0;font-size:1.4rem}
+header p{margin:4px 0 0;opacity:.85;font-size:.9rem}
+main{max-width:1150px;margin:0 auto;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stat b{display:block;font-size:1.7rem}
+.stat span{color:var(--mut);font-size:.85rem}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+input,select,button{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.bar input[type=search]{flex:1;min-width:200px}
+button{cursor:pointer}
+button.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+button.sm{padding:4px 8px;font-size:.8rem}
+.tw{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:760px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:.9rem}
+th{background:#fafbfd;color:var(--mut);font-weight:600;cursor:pointer;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.badge{padding:3px 9px;border-radius:99px;font-size:.78rem;font-weight:600;white-space:nowrap}
+.vigente{background:#e3f6ee;color:var(--ok)}.porvencer{background:#fff1d6;color:var(--warn)}.vencido{background:#fde4e4;color:var(--bad)}
+.empty{padding:30px;text-align:center;color:var(--mut)}
+dialog{border:0;border-radius:12px;padding:0;width:min(520px,94vw);box-shadow:0 10px 40px #0004}
+dialog::backdrop{background:#0006}
+form{padding:20px;display:grid;gap:12px}
+form h2{margin:0}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--mut)}
+label input,label select,label textarea{color:var(--ink);font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.acts{display:flex;justify-content:flex-end;gap:8px}
+footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Control Licenciamiento Agencia APP</h1>
+  <p>Seguimiento de licencias, vigencias y vencimientos</p>
+  <p style="margin-top:8px"><b id="uSes"></b> · <span id="rolSes"></span> · <a href="usuarios.html" id="lnkUsr" style="color:#fff" hidden>Usuarios</a><span id="sepUsr" hidden> · </span><a href="#" id="salir" style="color:#fff">Cerrar sesión</a></p>
+</header>
+<main>
+  <section class="stats" id="stats"></section>
+  <div class="bar">
+    <input type="search" id="q" placeholder="Buscar por agencia, aplicación, N.º de licencia…">
+    <select id="fEstado">
+      <option value="">Todos los estados</option>
+      <option value="vigente">Vigente</option>
+      <option value="porvencer">Por vencer (≤30 días)</option>
+      <option value="vencido">Vencido</option>
+    </select>
+    <button class="pri" id="btnNuevo">+ Nueva licencia</button>
+    <button id="btnCsv">Exportar CSV</button>
+    <button id="btnImp">Importar CSV</button>
+    <input type="file" id="fileImp" accept=".csv" hidden>
+  </div>
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th data-k="agencia">Agencia</th><th data-k="app">Aplicación</th><th data-k="tipo">Tipo</th>
+        <th data-k="num">N.º licencia</th><th data-k="usuarios">Usuarios</th>
+        <th data-k="fin">Vence</th><th>Estado</th><th></th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    <div class="empty" id="empty" hidden>No hay licencias registradas. Usa “Nueva licencia” para agregar la primera.</div>
+  </div>
+</main>
+<footer>Los datos se guardan en la nube (Firebase). Puedes exportar a CSV para respaldar.</footer>
+
+<dialog id="dlg">
+  <form id="frm" method="dialog">
+    <h2 id="dTitle">Nueva licencia</h2>
+    <label>Agencia<input name="agencia" required></label>
+    <label>Aplicación / Software<input name="app" required></label>
+    <div class="row">
+      <label>Tipo
+        <select name="tipo"><option>Anual</option><option>Mensual</option><option>Perpetua</option><option>Suscripción</option><option>Otra</option></select>
+      </label>
+      <label>N.º de licencia<input name="num"></label>
+    </div>
+    <div class="row">
+      <label>Fecha de inicio<input type="date" name="inicio"></label>
+      <label>Fecha de vencimiento<input type="date" name="fin" required></label>
+    </div>
+    <div class="row">
+      <label>Usuarios / equipos<input type="number" name="usuarios" min="0" value="1"></label>
+      <label>Responsable<input name="resp"></label>
+    </div>
+    <label>Notas<textarea name="notas" rows="2"></textarea></label>
+    <div class="acts">
+      <button type="button" id="btnCancel">Cancelar</button>
+      <button class="pri" type="submit">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+import {Auth} from './auth.js';
+const $=s=>document.querySelector(s);
+const me=await Auth.guard();
+if(me){
+const canEdit=Auth.can('lic');
+let data=[],sort={k:'fin',d:1},editId=null;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const aviso=t=>alert(t);
+function estado(l){
+  if(l.tipo==='Perpetua'&&!l.fin)return'vigente';
+  const d=Math.ceil((new Date(l.fin+'T00:00:00')-new Date().setHours(0,0,0,0))/864e5);
+  return d<0?'vencido':d<=30?'porvencer':'vigente';
+}
+const lbl={vigente:'Vigente',porvencer:'Por vencer',vencido:'Vencido'};
+function render(){
+  const q=$('#q').value.toLowerCase(),fe=$('#fEstado').value;
+  let rows=data.filter(l=>(!fe||estado(l)===fe)&&JSON.stringify(l).toLowerCase().includes(q));
+  rows.sort((a,b)=>String(a[sort.k]??'').localeCompare(String(b[sort.k]??''),'es',{numeric:true})*sort.d);
+  $('#tb').innerHTML=rows.map(l=>`<tr>
+    <td>${esc(l.agencia)}</td><td>${esc(l.app)}</td><td>${esc(l.tipo)}</td><td>${esc(l.num)}</td>
+    <td>${esc(l.usuarios)}</td><td>${esc(l.fin)}</td>
+    <td><span class="badge ${estado(l)}">${lbl[estado(l)]}</span></td>
+    <td>${canEdit?`<button class="sm" data-edit="${l.id}">Editar</button> <button class="sm" data-del="${l.id}">Borrar</button>`:''}</td></tr>`).join('');
+  $('#empty').hidden=rows.length>0;
+  const c={vigente:0,porvencer:0,vencido:0};data.forEach(l=>c[estado(l)]++);
+  $('#stats').innerHTML=`<div class="stat"><b>${data.length}</b><span>Total licencias</span></div>
+   <div class="stat"><b style="color:var(--ok)">${c.vigente}</b><span>Vigentes</span></div>
+   <div class="stat"><b style="color:var(--warn)">${c.porvencer}</b><span>Por vencer (≤30 días)</span></div>
+   <div class="stat"><b style="color:var(--bad)">${c.vencido}</b><span>Vencidas</span></div>`;
+}
+function edit(id){
+  if(!canEdit)return;
+  editId=id;const l=data.find(x=>x.id===id)||{};
+  $('#dTitle').textContent=id?'Editar licencia':'Nueva licencia';
+  const f=$('#frm');f.reset();
+  for(const k of ['agencia','app','tipo','num','inicio','fin','usuarios','resp','notas'])if(l[k]!==undefined)f.elements[k].value=l[k];
+  $('#dlg').showModal();
+}
+$('#tb').onclick=async e=>{
+  const b=e.target.closest('button');if(!b||!canEdit)return;
+  if(b.dataset.edit)edit(b.dataset.edit);
+  else if(b.dataset.del&&confirm('¿Eliminar esta licencia?')){
+    try{await Auth.licencias.remove(b.dataset.del);data=data.filter(x=>x.id!==b.dataset.del);render()}
+    catch(x){aviso('No se pudo eliminar (¿sin permiso?).')}
+  }
+};
+$('#btnNuevo').onclick=()=>edit(null);
+$('#btnCancel').onclick=()=>$('#dlg').close();
+$('#frm').onsubmit=async e=>{
+  const o=Object.fromEntries(new FormData(e.target));
+  const l=editId?{...data.find(x=>x.id===editId),...o}:{...o,id:crypto.randomUUID()};
+  try{
+    await Auth.licencias.save(l);
+    data=editId?data.map(x=>x.id===editId?l:x):[...data,l];
+    render();
+  }catch(x){aviso('No se pudo guardar (¿sin permiso?).')}
+};
+$('#q').oninput=render;$('#fEstado').onchange=render;
+document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
+  sort=sort.k===th.dataset.k?{k:sort.k,d:-sort.d}:{k:th.dataset.k,d:1};render();
+});
+const cols=['agencia','app','tipo','num','inicio','fin','usuarios','resp','notas'];
+$('#btnCsv').onclick=()=>{
+  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const csv=[cols.join(',')].concat(data.map(l=>cols.map(c=>q(l[c])).join(','))).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
+  a.download='licenciamiento.csv';a.click();
+};
+$('#btnImp').onclick=()=>$('#fileImp').click();
+$('#fileImp').onchange=e=>{
+  const r=new FileReader();
+  r.onload=async()=>{
+    const lines=r.result.replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean).slice(1),nuevos=[];
+    lines.forEach(ln=>{
+      const v=[...ln.matchAll(/("([^"]|"")*"|[^,]*)(,|$)/g)].map(m=>m[1].replace(/^"|"$/g,'').replace(/""/g,'"')).slice(0,cols.length);
+      const o={id:crypto.randomUUID()};cols.forEach((c,i)=>o[c]=v[i]||'');
+      if(o.agencia&&o.app&&o.fin)nuevos.push(o);
+    });
+    try{await Auth.licencias.saveMany(nuevos);data=[...data,...nuevos];render()}
+    catch(x){aviso('No se pudo importar (¿sin permiso?).')}
+    e.target.value='';
+  };
+  r.readAsText(e.target.files[0]);
+};
+$('#uSes').textContent='Usuario: '+me.cc;
+$('#rolSes').textContent=Auth.ROLES[me.rol].n;
+if(Auth.can('usr_ver'))$('#lnkUsr').hidden=$('#sepUsr').hidden=false;
+if(!canEdit)$('#btnNuevo').hidden=$('#btnImp').hidden=true;
+$('#salir').onclick=e=>{e.preventDefault();Auth.logout()};
+try{data=await Auth.licencias.list()}catch(e){aviso('No se pudieron cargar las licencias.')}
+render();
+}
+</script>
+</body>
+</html>
