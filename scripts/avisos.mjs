@@ -32,9 +32,9 @@ const r6 = toca15 ? lics.filter(l => { const d = dias(l); return d !== null && d
 
 const tabla = (arr, conDias) =>
   '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse;font-family:Arial;font-size:13px">' +
-  '<tr style="background:#eee"><th>Software</th><th>Serie</th><th>Proveedor</th><th>Contrato</th><th>Vencimiento</th>' + (conDias ? '<th>Dias</th>' : '') + '</tr>' +
+  '<tr style="background:#eee"><th>Software</th><th>Proveedor</th><th>Contrato</th><th>Vencimiento</th>' + (conDias ? '<th>Días</th>' : '') + '</tr>' +
   arr.sort((a, b) => (dias(a) ?? 9e9) - (dias(b) ?? 9e9)).map(l =>
-    '<tr><td>' + esc(l.nombre) + '</td><td>' + esc(l.serie) + '</td><td>' + esc(l.proveedor) + '</td><td>' + esc(l.contrato) + '</td><td>' + esc(l.vencimiento || 'Sin fecha') + '</td>' +
+    '<tr><td>' + esc(l.nombre) + '</td><td>' + esc(l.proveedor) + '</td><td>' + esc(l.contrato) + '</td><td>' + esc(l.vencimiento || 'Sin fecha') + '</td>' +
     (conDias ? '<td>' + dias(l) + '</td>' : '') + '</tr>').join('') + '</table>';
 
 const partes = [];
@@ -54,7 +54,7 @@ if (partes.length) {
   ].filter(Boolean).join(', ');
   await tr.sendMail({
     from: process.env.SMTP_USER, to: TO, subject: asunto,
-    html: '<div style="font-family:Arial">' + partes.join('<br>') + '<p style="color:#666;font-size:12px">Aviso automatico - Control de Licenciamiento. ' + ymd + '</p></div>'
+    html: '<div style="font-family:Arial"><p>Señores Agencia APP,</p>' + ((r3.length || r6.length) ? '<p>Actualmente tiene el siguiente licenciamiento a vencer:</p>' : '') + partes.join('<br>') + '<p style="color:#666;font-size:12px">Aviso automatico - Control de Licenciamiento. ' + ymd + '</p></div>'
   });
   console.log('Correo enviado:', asunto);
 } else {
