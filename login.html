@@ -45,10 +45,10 @@ li::before{content:"○ "}li.ok{color:var(--ok)}li.ok::before{content:"● "}
       <span class="pw"><input id="p" type="password" autocomplete="current-password"><button type="button" id="eye">Ver</button></span>
     </label>
     <label id="c2" hidden>Confirmar contraseña
-      <input id="p2" type="password" maxlength="8" autocomplete="new-password">
+      <input id="p2" type="password" autocomplete="new-password">
     </label>
     <ul id="rules" hidden>
-      <li data-r="len">Exactamente 8 caracteres</li>
+      <li data-r="len">Mínimo 8 caracteres</li>
       <li data-r="up">Una mayúscula</li>
       <li data-r="lo">Una minúscula</li>
       <li data-r="nu">Un número</li>
@@ -70,7 +70,7 @@ try{
 }catch(e){msg('No se pudo conectar con el servidor.')}
 if(boot){
   for(const s of ['#note','#lMail','#lNom','#c2','#rules'])$(s).hidden=false;
-  $('#p').autocomplete='new-password';$('#p').maxLength=8;
+  $('#p').autocomplete='new-password';
   $('#go').textContent='Crear administrador inicial';$('#olv').hidden=true;
 }
 function upd(){const p=$('#p').value;document.querySelectorAll('#rules li').forEach(li=>li.classList.toggle('ok',Auth.checks[li.dataset.r](p)))}
