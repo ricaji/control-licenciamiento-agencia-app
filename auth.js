@@ -11,7 +11,7 @@ import {firebaseConfig} from './firebase-config.js';
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
 
 const ROLES={
-  admin:{n:'Administrador',p:['lic','usr_ver','usr_crear','usr_rol','usr_estado','usr_clave','usr_clave_admin']},
+  admin:{n:'Administrador',p:['lic','lic_borrar','usr_ver','usr_crear','usr_rol','usr_estado','usr_clave','usr_clave_admin']},
   supervisor:{n:'Supervisor',p:['lic','usr_ver','usr_clave']},
   consulta:{n:'Consulta',p:[]}
 };
@@ -184,6 +184,13 @@ const licencias={
   async list(){return (await getDocs(collection(db,'licencias'))).docs.map(d=>({id:d.id,...d.data()}))},
   save:l=>{const {id,...rest}=l;return setDoc(doc(db,'licencias',id),rest)},
   remove:id=>deleteDoc(doc(db,'licencias',id)),
+  async removeMany(ids){
+    for(let i=0;i<ids.length;i+=400){
+      const b=writeBatch(db);
+      ids.slice(i,i+400).forEach(id=>b.delete(doc(db,'licencias',id)));
+      await b.commit();
+    }
+  },
   async saveMany(arr){
     for(let i=0;i<arr.length;i+=400){
       const b=writeBatch(db);
