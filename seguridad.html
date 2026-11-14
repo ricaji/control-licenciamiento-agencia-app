@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguridad | Licenciamiento_APP</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<style>
+:root{--pri:#1f5eff;--ink:#1c2430;--mut:#6b7686;--line:#e2e7ee;--ok:#12805c;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:linear-gradient(135deg,#1f5eff,#0b2a7a);color:var(--ink);padding:16px}
+.card{background:#fff;border-radius:14px;width:min(440px,100%);padding:26px;box-shadow:0 12px 40px #0004}
+h1{margin:0 0 4px;font-size:1.2rem;text-align:center}
+.sub{margin:0 0 16px;text-align:center;color:var(--mut);font-size:.88rem}
+p{font-size:.9rem;line-height:1.4}
+label{display:grid;gap:4px;font-size:.85rem;color:var(--mut);margin-bottom:12px}
+input{font:inherit;color:var(--ink);padding:10px;border:1px solid var(--line);border-radius:8px;width:100%}
+.go{width:100%;padding:11px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:inherit;font-weight:600;cursor:pointer;margin-top:4px}
+.go:disabled{opacity:.5}
+.alt{background:#eef2ff;color:var(--pri)}
+.msg{min-height:1.2em;margin-top:10px;text-align:center;font-size:.85rem;color:var(--bad)}.msg.ok{color:var(--ok)}
+#qr{display:grid;place-items:center;margin:10px 0}
+code{display:block;word-break:break-all;background:#f3f5f9;border-radius:8px;padding:8px;font-size:.85rem;text-align:center;user-select:all}
+.warn{background:#fff6e0;color:#7a5200;border-radius:8px;padding:10px;font-size:.82rem;margin:10px 0}
+.back{display:block;text-align:center;margin-top:14px;font-size:.85rem;color:var(--pri)}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Seguridad de la cuenta</h1>
+  <p class="sub" id="who"></p>
+  <div id="v"></div>
+  <div class="msg" id="msg"></div>
+  <a class="back" href="index.html" id="back" hidden>Volver al panel</a>
+</div>
+<script type="module">
+import {Auth} from './auth.js';
+const $=s=>document.querySelector(s);
+const msg=(t,ok)=>{$('#msg').textContent=t;$('#msg').className='msg'+(ok?' ok':'')};
+const me=await Auth.guard(null,{setup:true});
+if(me){
+  $('#who').textContent='Cédula '+me.cc;
+  let sec=null;
+  const view=h=>{$('#v').innerHTML=h};
+  const errm=e=>e.message==='mail'?'Escribe un correo válido.':e.code==='auth/requires-recent-login'?'Por seguridad, cierra sesión, vuelve a ingresar y repite este paso.':e.code==='auth/email-already-in-use'?'Ese correo ya está en uso.':e.code==='auth/too-many-requests'?'Demasiados intentos. Espera unos minutos.':'No se pudo completar. Intenta de nuevo.';
+  async function render(){
+    msg('');
+    const s=Auth.secState();
+    if(s.mfa){
+      view('<p>✅ Tu cuenta ya tiene el <b>código de autenticador</b> activo. Se te pedirá cada vez que ingreses.</p>');
+      $('#back').hidden=false;return;
+    }
+    if(!s.verified){
+      view(`<p>Primero hay que <b>verificar tu correo</b>. Te enviaremos un enlace; ábrelo y luego vuelve aquí.</p>
+        <label>Correo<input id="em" type="email" value="${s.placeholder?'':s.email}" placeholder="tucorreo@ejemplo.com"></label>
+        <button class="go" id="send">Enviar enlace de verificación</button>
+        <button class="go alt" id="chk">Ya lo verifiqué</button>`);
+      $('#send').onclick=async()=>{
+        const em=$('#em').value.trim();
+        try{await Auth.secSendVerify(em&&em!==s.email?em:null);
+          msg('Enlace enviado a '+(em||s.email)+'. Ábrelo y, si te pide ingresar de nuevo, entra con tu cédula y contraseña.',true)}
+        catch(e){msg(errm(e))}
+      };
+      $('#chk').onclick=async()=>{
+        try{const n=await Auth.secRefresh();if(n.verified)render();else msg('Aún no aparece verificado. Abre el enlace del correo y vuelve a pulsar.')}
+        catch(e){msg(errm(e))}
+      };
+      return;
+    }
+    try{sec=await Auth.totpBegin()}catch(e){view('');return msg(errm(e))}
+    view(`<p>1. Instala <b>Google Authenticator</b>, <b>Microsoft Authenticator</b> o similar.<br>2. Escanea el código (o escribe la clave).<br>3. Escribe el código de 6 dígitos que aparece.</p>
+      <div id="qr"></div><code>${sec.key}</code>
+      <div class="warn">Guarda la clave en un lugar seguro: si pierdes el celular sin ella, un administrador de Firebase deberá restablecer tu acceso.</div>
+      <label>Código de 6 dígitos<input id="cod" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></label>
+      <button class="go" id="ok">Activar</button>`);
+    try{const q=qrcode(0,'M');q.addData(sec.uri);q.make();$('#qr').innerHTML=q.createSvgTag({cellSize:4,margin:2})}catch(e){}
+    $('#cod').oninput=e=>e.target.value=e.target.value.replace(/\D/g,'');
+    $('#ok').onclick=async()=>{
+      const c=$('#cod').value.trim();
+      if(!/^\d{6}$/.test(c))return msg('El código tiene 6 dígitos.');
+      try{await Auth.totpFinish(sec.secret,c);msg('¡Listo! Verificación en dos pasos activada.',true);setTimeout(()=>location.href='index.html',1200)}
+      catch(e){msg(e.code==='auth/invalid-verification-code'?'Código incorrecto o vencido.':errm(e))}
+    };
+  }
+  render();
+}
+</script>
+</body>
+</html>
