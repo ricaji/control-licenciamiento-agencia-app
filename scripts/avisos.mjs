@@ -53,7 +53,7 @@ if (partes.length) {
     r6.length && r6.length + ' por vencer (3-6 meses)'
   ].filter(Boolean).join(', ');
   await tr.sendMail({
-    from: process.env.SMTP_USER, to: TO, subject: asunto,
+    from: process.env.SMTP_USER, to: TO, subject: 'Seguimiento al Licenciamiento APP',
     html: '<div style="font-family:Arial"><p>Señores Agencia APP,</p>' + ((r3.length || r6.length) ? '<p>Actualmente tiene el siguiente licenciamiento a vencer:</p>' : '') + partes.join('<br>') + '<p style="color:#666;font-size:12px">Aviso automatico - Control de Licenciamiento. ' + ymd + '</p></div>'
   });
   console.log('Correo enviado:', asunto);
