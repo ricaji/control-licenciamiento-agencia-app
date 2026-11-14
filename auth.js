@@ -122,7 +122,16 @@ async function totpFinish(secret,code){
   const a=TotpMultiFactorGenerator.assertionForEnrollment(secret,code);
   await multiFactor(auth.currentUser).enroll(a,'Autenticador');
 }
-const logout=async()=>{await signOut(auth);location.href='login.html'};
+const logout=async()=>{
+  const n=ME?(ME.nombre||ME.cc):'';
+  const o=document.createElement('div');
+  o.style.cssText='position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:linear-gradient(135deg,#1f5eff,#0b2a7a);color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:24px';
+  o.innerHTML='<div><h1 style="margin:0 0 8px;font-size:1.6rem">¡Gracias por visitarnos!</h1><p style="margin:0;font-size:1.15rem"></p></div>';
+  o.querySelector('p').textContent=n;
+  document.body.appendChild(o);
+  try{await signOut(auth)}catch(e){}
+  setTimeout(()=>{location.href='login.html'},2500);
+};
 
 async function bootstrap(cc,email,nombre,pw){
   const cred=await createUserWithEmailAndPassword(auth,email,pw);
