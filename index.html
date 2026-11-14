@@ -43,10 +43,13 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
 </style>
 </head>
 <body>
-<header>
+<header style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+  <div>
   <h1>Licenciamiento_APP</h1>
   <p>Seguimiento de licencias, vigencias y vencimientos</p>
-  <p style="margin-top:8px"><b id="uSes"></b> · <span id="rolSes"></span> · <a href="usuarios.html" id="lnkUsr" style="color:#fff" hidden>Usuarios</a><span id="sepUsr" hidden> · </span><a href="seguridad.html" style="color:#fff">Seguridad</a> · <a href="#" id="salir" style="color:#fff">Cerrar sesión</a></p>
+  <p style="margin-top:8px"><a href="usuarios.html" id="lnkUsr" style="color:#fff" hidden>Usuarios</a><span id="sepUsr" hidden> · </span><a href="seguridad.html" style="color:#fff">Seguridad</a> · <a href="#" id="salir" style="color:#fff">Cerrar sesión</a></p>
+  </div>
+  <div style="text-align:right"><p style="margin:0;font-size:1rem;opacity:1"><b>Bienvenido</b> <span id="uNom"></span></p><p style="margin:4px 0 0">Perfil: <span id="rolSes"></span></p></div>
 </header>
 <main>
   <section class="stats" id="stats"></section>
@@ -190,7 +193,7 @@ $('#fileImp').onchange=e=>{
   };
   r.readAsText(e.target.files[0]);
 };
-$('#uSes').textContent='Usuario: '+me.cc;
+$('#uNom').textContent=me.nombre||me.cc;
 $('#rolSes').textContent=Auth.ROLES[me.rol].n;
 if(Auth.can('usr_ver'))$('#lnkUsr').hidden=$('#sepUsr').hidden=false;
 if(!canEdit)$('#btnNuevo').hidden=$('#btnImp').hidden=true;
