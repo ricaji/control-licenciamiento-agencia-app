@@ -62,9 +62,19 @@ label input,label select{color:var(--ink);width:100%}
   <p class="hint" id="eCc"></p>
   <label>Nombres<input id="eNom"></label>
   <label>Apellidos<input id="eApe"></label>
-  <p class="hint">El rol y el estado se cambian directamente en la lista. La cédula y el correo no se pueden modificar.</p>
+  <label>Correo electrónico<input id="eMail" type="email"></label>
+  <p class="hint" id="eMailHint"></p>
+  <p class="hint">El rol y el estado se cambian directamente en la lista. La cédula no se puede modificar.</p>
   <div class="msg" id="eMsg"></div>
   <div class="acts"><button type="button" id="eCancel">Cancelar</button><button class="pri" id="eOk" type="submit">Guardar</button></div>
+</form></dialog>
+
+<dialog id="dMail"><form method="dialog">
+  <h2>Correo actualizado</h2>
+  <p class="hint">Usuario: <b id="kWho"></b></p>
+  <p class="hint">Ya quedó guardado en la lista. Para que la cuenta de acceso use el correo nuevo, abre Cloud Shell (console.cloud.google.com, ícono &gt;_), pega este comando y pulsa Enter. Mientras tanto la persona puede seguir entrando con su correo anterior.</p>
+  <pre id="kCmd" style="white-space:pre-wrap;word-break:break-all;background:#f3f5f9;padding:8px;border-radius:8px;font-size:.75rem"></pre>
+  <div class="acts"><button type="button" onclick="navigator.clipboard.writeText(document.getElementById('kCmd').textContent)">Copiar</button><button class="pri" type="button" onclick="this.closest('dialog').close()">Cerrar</button></div>
 </form></dialog>
 
 <dialog id="dMfa"><form method="dialog">
@@ -121,7 +131,7 @@ if(me){
     if(b.dataset.edit){
       const u=list.find(x=>x.uid===b.dataset.edit);if(!u||!Auth.can('usr_rol'))return;
       editUid=u.uid;$('#eCc').textContent=u.cc+' · '+u.email;
-      $('#eNom').value=u.nombres??u.nombre??'';$('#eApe').value=u.apellidos??'';$('#eMsg').textContent='';$('#dEdit').showModal();
+      $('#eNom').value=u.nombres??u.nombre??'';$('#eMail').value=u.email||'';$('#eMail').disabled=u.uid===me.uid;$('#eMailHint').textContent=u.uid===me.uid?'Tu propio correo se cambia desde Seguridad.':'';$('#eApe').value=u.apellidos??'';$('#eMsg').textContent='';$('#dEdit').showModal();
     }else if(b.dataset.mfa){
       const u=list.find(x=>x.uid===b.dataset.mfa);if(!u||!Auth.can('usr_clave_admin'))return;
       const cmd='curl -s -X POST "https://identitytoolkit.googleapis.com/v1/projects/control-licenciamiento-app/accounts:update" -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: control-licenciamiento-app" -H "Content-Type: application/json" -d \'{"localId":"'+u.uid+'","mfa":{}}\'';
@@ -147,12 +157,22 @@ if(me){
     e.preventDefault();
     const nombres=$('#eNom').value.trim(),apellidos=$('#eApe').value.trim(),m=$('#eMsg');
     if(!nombres||!apellidos)return m.textContent='Escribe nombres y apellidos.';
+    const cur=list.find(x=>x.uid===editUid),mail=$('#eMail').value.trim().toLowerCase();
+    const cambia=editUid!==me.uid&&mail&&mail!==String(cur.email).toLowerCase();
+    if(cambia&&!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(mail))return m.textContent='Escribe un correo válido.';
     $('#eOk').disabled=true;m.textContent='';
     try{
       const nombre=(nombres+' '+apellidos).trim();
       await Auth.users.update(editUid,{nombres,apellidos,nombre});
-      Object.assign(list.find(x=>x.uid===editUid),{nombres,apellidos,nombre});
+      Object.assign(cur,{nombres,apellidos,nombre});
+      let cmd=null;
+      if(cambia){
+        await Auth.setEmail(cur.uid,cur.cc,cur.email,mail);
+        cur.email=mail;
+        cmd='curl -s -X POST "https://identitytoolkit.googleapis.com/v1/projects/control-licenciamiento-app/accounts:update" -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "X-Goog-User-Project: control-licenciamiento-app" -H "Content-Type: application/json" -d \'{"localId":"'+cur.uid+'","email":"'+mail+'","emailVerified":true}\'';
+      }
       $('#dEdit').close();render();info('Usuario actualizado.');
+      if(cmd){$('#kWho').textContent=cur.cc+' · '+nombre;$('#kCmd').textContent=cmd;$('#dMail').showModal()}
     }catch(x){m.textContent='No se pudo guardar.'}
     $('#eOk').disabled=false;
   };
