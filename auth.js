@@ -137,7 +137,7 @@ async function bootstrap(cc,email,nombre,pw){
 }
 
 // El administrador crea la cuenta y a la persona le llega un correo para elegir su contraseña.
-async function createUser({cc,email,nombre,rol}){
+async function createUser({cc,email,nombre,nombres,apellidos,rol}){
   if(!can('usr_crear'))throw new Error('permiso');
   if((await getDoc(doc(db,'cedulas',cc))).exists())throw new Error('cc-existe');
   const sec=initializeApp(firebaseConfig,'sec'+Date.now()),sa=getAuth(sec);
@@ -147,7 +147,7 @@ async function createUser({cc,email,nombre,rol}){
     uid=c.user.uid;await signOut(sa);
   }finally{await deleteApp(sec)}
   const b=writeBatch(db);
-  b.set(doc(db,'usuarios',uid),{cc,nombre,email,rol,activo:true,creado:Date.now()});
+  b.set(doc(db,'usuarios',uid),{cc,nombre,nombres:nombres||'',apellidos:apellidos||'',email,rol,activo:true,creado:Date.now()});
   b.set(doc(db,'cedulas',cc),{email,uid});
   await b.commit();
   await sendPasswordResetEmail(auth,email);
