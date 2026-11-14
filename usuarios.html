@@ -40,7 +40,7 @@ label input,label select{color:var(--ink);width:100%}
 <main>
   <div class="bar"><span class="info" id="info"></span><button class="pri" id="nuevo" hidden>+ Nuevo usuario</button></div>
   <div class="tw"><table>
-    <thead><tr><th>Cédula</th><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Cédula</th><th>Nombres y apellidos</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
 </main>
@@ -48,7 +48,8 @@ label input,label select{color:var(--ink);width:100%}
 <dialog id="dNew"><form id="fNew" method="dialog">
   <h2>Nuevo usuario</h2>
   <label>Cédula<input id="nCc" inputmode="numeric" maxlength="10"></label>
-  <label>Nombre<input id="nNom"></label>
+  <label>Nombres<input id="nNom"></label>
+  <label>Apellidos<input id="nApe"></label>
   <label>Correo electrónico<input id="nMail" type="email"></label>
   <label>Rol<select id="nRol"></select></label>
   <p class="hint">Al crear el usuario le llegará un correo con un enlace para elegir su propia contraseña.</p>
@@ -128,13 +129,14 @@ if(me){
   $('#nuevo').onclick=()=>{$('#fNew').reset();$('#nMsg').textContent='';$('#dNew').showModal()};
   $('#fNew').onsubmit=async e=>{
     e.preventDefault();
-    const cc=$('#nCc').value.trim(),email=$('#nMail').value.trim(),nombre=$('#nNom').value.trim(),m=$('#nMsg');
+    const cc=$('#nCc').value.trim(),email=$('#nMail').value.trim(),nombres=$('#nNom').value.trim(),apellidos=$('#nApe').value.trim(),nombre=(nombres+' '+apellidos).trim(),m=$('#nMsg');
     if(!Auth.ccOk(cc))return m.textContent='La cédula debe tener entre 6 y 10 dígitos.';
-    if(!nombre)return m.textContent='Escribe el nombre.';
+    if(!nombres)return m.textContent='Escribe los nombres.';
+    if(!apellidos)return m.textContent='Escribe los apellidos.';
     if(!Auth.emailOk(email))return m.textContent='Escribe un correo válido.';
     $('#nOk').disabled=true;m.textContent='';
     try{
-      await Auth.createUser({cc,email,nombre,rol:$('#nRol').value});
+      await Auth.createUser({cc,email,nombre,nombres,apellidos,rol:$('#nRol').value});
       $('#dNew').close();info('Usuario creado. Se envió un correo a '+email+'.');await load();
     }catch(x){
       m.textContent=x.message==='cc-existe'?'Esa cédula ya existe.'
