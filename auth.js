@@ -15,7 +15,7 @@ const ROLES={
   consulta:{n:'Consulta',p:[]}
 };
 const checks={
-  len:p=>p.length===8,up:p=>/[A-Z]/.test(p),lo:p=>/[a-z]/.test(p),
+  len:p=>p.length>=8,up:p=>/[A-Z]/.test(p),lo:p=>/[a-z]/.test(p),
   nu:p=>/[0-9]/.test(p),sp:p=>/[^A-Za-z0-9]/.test(p)
 };
 const pwOk=p=>Object.values(checks).every(f=>f(p));
