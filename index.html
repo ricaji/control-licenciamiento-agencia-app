@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Licenciamiento_APP</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <style>
 :root{--bg:#f5f7fa;--card:#fff;--ink:#1c2430;--mut:#6b7686;--line:#e2e7ee;--pri:#1f5eff;--ok:#12805c;--warn:#b26a00;--bad:#c62828}
@@ -69,9 +70,9 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
       <option value="vencido">Vencido</option>
     </select>
     <button class="pri" id="btnNuevo">+ Nueva licencia</button>
-    <button id="btnCsv">Exportar CSV</button>
-    <button id="btnImp">Importar CSV</button>
-    <input type="file" id="fileImp" accept=".csv" hidden>
+    <button id="btnCsv">Exportar Excel</button>
+    <button id="btnImp">Importar Excel</button>
+    <input type="file" id="fileImp" accept=".xlsx,.xls,.csv" hidden>
   </div>
   <div class="tw">
     <table>
@@ -83,7 +84,7 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
     <div class="empty" id="empty" hidden>No hay licencias registradas. Usa “Nueva licencia” para agregar la primera.</div>
   </div>
 </main>
-<footer>Los datos se guardan en la nube (Firebase). Puedes exportar a CSV para respaldar.</footer>
+<footer>Los datos se guardan en la nube (Firebase). Puedes exportar a Excel para respaldar.</footer>
 
 <dialog id="dlg">
   <form id="frm" method="dialog">
@@ -181,29 +182,64 @@ $('#q').oninput=render;$('#fEstado').onchange=render;
 document.querySelectorAll('th[data-k]').forEach(th=>th.onclick=()=>{
   sort=sort.k===th.dataset.k?{k:sort.k,d:-sort.d}:{k:th.dataset.k,d:1};render();
 });
-const cols=['nombre','serie','fabricante','cantidad','anio','activacion','tiempo','vencimiento','contrato','proveedor','valorUnit','valorTotal','renovacion','nuevoContrato','claves'];
+const HDR=[['nombre','Nombre del software'],['serie','SERIE'],['fabricante','Fabricante'],['cantidad','Cantidad'],['anio','Año'],['activacion','Fecha de activación'],['tiempo','Tiempo de licencia'],['vencimiento','Fecha de Vencimiento'],['contrato','Contrato asociado'],['proveedor','Proveedor'],['valorUnit','Valor Unitario'],['valorTotal','Valor total'],['estado','Estado'],['avencer','A VENCER'],['renovacion','Renovación'],['nuevoContrato','Nuevo contrato'],['claves','CLAVES']];
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const ALIAS={nombre:'nombre',nombredelsoftware:'nombre',software:'nombre',serie:'serie',fabricante:'fabricante',cantidad:'cantidad',ano:'anio',fechadeactivacion:'activacion',activacion:'activacion',tiempodelicencia:'tiempo',tiempo:'tiempo',fechadevencimiento:'vencimiento',vencimiento:'vencimiento',contratoasociado:'contrato',contrato:'contrato',proveedor:'proveedor',valorunitario:'valorUnit',renovacion:'renovacion',nuevocontrato:'nuevoContrato',claves:'claves',clave:'claves'};
+const pad=n=>String(n).padStart(2,'0');
+function fecha(v){
+  if(v instanceof Date){const t=new Date(v.getTime()+12*36e5);return t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate())}
+  const s=String(v??'').trim();
+  const m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  return m?m[3]+'-'+pad(m[2])+'-'+pad(m[1]):s.slice(0,10);
+}
+function num(v){
+  if(typeof v==='number')return String(v);
+  let s=String(v??'').replace(/[$\s]/g,'');
+  if(!s)return '';
+  s=/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)?s.replace(/\./g,'').replace(',','.'):s.replace(',','.');
+  return isFinite(Number(s))?String(Number(s)):'';
+}
 $('#btnCsv').onclick=()=>{
-  const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const csv=[cols.join(',')].concat(data.map(l=>cols.map(c=>q(l[c])).join(','))).join('\n');
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));
-  a.download='licenciamiento.csv';a.click();
+  const rows=data.map(l=>{
+    const o={},d=dias(l);
+    HDR.forEach(([k,h])=>{
+      o[h]=k==='valorTotal'?total(l):k==='estado'?lbl[estado(l)]:k==='avencer'?(d===null?'':d):['cantidad','anio','valorUnit'].includes(k)?(l[k]===''||l[k]==null?'':Number(l[k])):(l[k]??'');
+    });
+    return o;
+  });
+  const ws=XLSX.utils.json_to_sheet(rows,{header:HDR.map(h=>h[1])});
+  ws['!cols']=HDR.map(h=>({wch:Math.max(14,h[1].length+2)}));
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Licencias');
+  XLSX.writeFile(wb,'licenciamiento.xlsx');
 };
 $('#btnImp').onclick=()=>$('#fileImp').click();
 $('#fileImp').onchange=e=>{
+  const inp=e.target,file=inp.files[0];if(!file)return;
   const r=new FileReader();
   r.onload=async()=>{
-    const lines=r.result.replace(/^\ufeff/,'').split(/\r?\n/).filter(Boolean).slice(1),nuevos=[];
-    lines.forEach(ln=>{
-      const v=[...ln.matchAll(/("([^"]|"")*"|[^,]*)(,|$)/g)].map(m=>m[1].replace(/^"|"$/g,'').replace(/""/g,'"')).slice(0,cols.length);
-      const o={id:crypto.randomUUID()};cols.forEach((c,i)=>o[c]=v[i]||'');
-      if(o.nombre&&o.vencimiento)nuevos.push(o);
-    });
-    try{await Auth.licencias.saveMany(nuevos);data=[...data,...nuevos];render()}
-    catch(x){aviso('No se pudo importar (¿sin permiso?).')}
-    e.target.value='';
+    try{
+      const wb=XLSX.read(r.result,{type:'array',cellDates:true});
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:'',raw:true});
+      const nuevos=[];let omit=0;
+      rows.forEach(row=>{
+        const o={id:crypto.randomUUID()};
+        HDR.forEach(([k])=>{if(k!=='estado'&&k!=='avencer')o[k]=''});
+        for(const h in row){
+          const k=ALIAS[norm(h)];if(!k)continue;
+          const v=row[h];
+          o[k]=k==='activacion'||k==='vencimiento'?fecha(v):['cantidad','anio','valorUnit'].includes(k)?num(v):String(v??'').trim();
+        }
+        if(!o.anio&&o.activacion)o.anio=o.activacion.slice(0,4);
+        o.valorTotal=String(total(o));
+        if(o.nombre&&o.vencimiento)nuevos.push(o);else omit++;
+      });
+      if(!nuevos.length){aviso('No se encontraron filas válidas. Revisa que existan las columnas “Nombre del software” y “Fecha de Vencimiento”.');return}
+      await Auth.licencias.saveMany(nuevos);data=[...data,...nuevos];render();
+      aviso('Se importaron '+nuevos.length+' licencias.'+(omit?' Se omitieron '+omit+' filas sin nombre o sin fecha de vencimiento.':''));
+    }catch(x){aviso('No se pudo importar el archivo (¿formato o permisos?).')}
+    finally{inp.value=''}
   };
-  r.readAsText(e.target.files[0]);
+  r.readAsArrayBuffer(file);
 };
 $('#uNom').textContent=me.nombre||me.cc;
 $('#rolSes').textContent=Auth.ROLES[me.rol].n;
