@@ -90,6 +90,7 @@ $('#olv').onclick=async()=>{
 };
 $('#f').onsubmit=async e=>{
   e.preventDefault();
+  $('#p').type=$('#p2').type='password';$('#eye').textContent='Ver';
   const u=$('#u').value.trim(),p=$('#p').value,b=$('#go');
   if(!Auth.ccOk(u))return msg('La cédula debe tener entre 6 y 10 dígitos numéricos.');
   b.disabled=true;msg('');
@@ -110,6 +111,7 @@ $('#f').onsubmit=async e=>{
         if(r&&r.mfa){
           step2=true;
           for(const s of ['#u','#p'])$(s).readOnly=true;
+          $('#eye').hidden=true;
           $('#lCod').hidden=false;$('#cod').focus();$('#go').textContent='Verificar código';$('#olv').hidden=true;
           msg('Escribe el código que muestra tu app autenticadora.',true);
           b.disabled=false;return;
