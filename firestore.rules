@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function perfil() { return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data; }
+    function activo() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/usuarios/$(request.auth.uid))
+        && perfil().activo == true;
+    }
+    function esAdmin() { return activo() && perfil().rol == 'admin'; }
+    function esStaff() { return activo() && perfil().rol in ['admin', 'supervisor']; }
+    // Solo el primer administrador puede crearse (junto con config/init) en un mismo lote
+    function primerAdmin() {
+      return !exists(/databases/$(database)/documents/config/init)
+        && existsAfter(/databases/$(database)/documents/config/init);
+    }
+
+    match /config/init {
+      allow get: if true;
+      allow create: if request.auth != null
+        && !exists(/databases/$(database)/documents/config/init)
+        && getAfter(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    // cédula -> correo (solo consulta puntual; no se puede listar)
+    match /cedulas/{cc} {
+      allow get: if true;
+      allow create, update: if esAdmin()
+        || (primerAdmin() && request.resource.data.uid == request.auth.uid);
+    }
+
+    match /usuarios/{uid} {
+      allow get: if request.auth != null && (request.auth.uid == uid || esStaff());
+      allow list: if esStaff();
+      allow create: if esAdmin()
+        || (request.auth.uid == uid && primerAdmin() && request.resource.data.rol == 'admin');
+      allow update: if esAdmin();
+    }
+
+    match /licencias/{id} {
+      allow read: if activo();
+      allow write: if esStaff();
+    }
+  }
+}
