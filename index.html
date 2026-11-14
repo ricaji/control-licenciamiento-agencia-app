@@ -72,6 +72,7 @@ footer{text-align:center;color:var(--mut);font-size:.8rem;padding:20px}
     <button class="pri" id="btnNuevo">+ Nueva licencia</button>
     <button id="btnCsv">Exportar Excel</button>
     <button id="btnImp">Importar Excel</button>
+    <button id="btnDelAll" style="color:#fff;background:var(--bad);border-color:var(--bad)" hidden>Borrar todas</button>
     <input type="file" id="fileImp" accept=".xlsx,.xls,.csv" hidden>
   </div>
   <div class="tw">
@@ -133,7 +134,7 @@ function render(){
     <td><span class="badge ${l._e}">${lbl[l._e]}</span></td><td>${esc(venc(l))}</td>
     <td>${esc(l.renovacion)}</td><td>${esc(l.nuevoContrato)}</td>
     <td class="clv" data-v="${esc(l.claves)}" title="Clic para ver u ocultar">${l.claves?'••••••':''}</td>
-    <td>${canEdit?`<button class="sm" data-edit="${l.id}">Editar</button> <button class="sm" data-del="${l.id}">Borrar</button>`:''}</td></tr>`).join('');
+    <td>${canEdit?`<button class="sm" data-edit="${l.id}">Editar</button>${Auth.can('lic_borrar')?` <button class="sm" data-del="${l.id}">Borrar</button>`:''}`:''}</td></tr>`).join('');
   $('#empty').hidden=rows.length>0;
   const c={vigente:0,porvencer:0,vencido:0};data.forEach(l=>{const e=estado(l);if(e in c)c[e]++});
   $('#stats').innerHTML=`<div class="stat"><b>${data.length}</b><span>Total licencias</span></div>
@@ -160,12 +161,18 @@ $('#tb').onclick=async e=>{
   if(cv&&cv.dataset.v){cv.textContent=cv.textContent==='••••••'?cv.dataset.v:'••••••';return}
   const b=e.target.closest('button');if(!b||!canEdit)return;
   if(b.dataset.edit)edit(b.dataset.edit);
-  else if(b.dataset.del&&confirm('¿Eliminar esta licencia?')){
+  else if(b.dataset.del&&Auth.can('lic_borrar')&&confirm('¿Eliminar esta licencia?')){
     try{await Auth.licencias.remove(b.dataset.del);data=data.filter(x=>x.id!==b.dataset.del);render()}
     catch(x){aviso('No se pudo eliminar (¿sin permiso?).')}
   }
 };
 $('#btnNuevo').onclick=()=>edit(null);
+$('#btnDelAll').onclick=async()=>{
+  if(!Auth.can('lic_borrar')||!data.length)return;
+  if(prompt('Se borrarán TODAS las '+data.length+' licencias y no se puede deshacer.\nPara confirmar escribe: BORRAR TODO')!=='BORRAR TODO')return;
+  try{await Auth.licencias.removeMany(data.map(l=>l.id));data=[];render();aviso('Se eliminaron todas las licencias.')}
+  catch(x){aviso('No se pudo eliminar (¿sin permiso?).')}
+};
 $('#btnCancel').onclick=()=>$('#dlg').close();
 $('#frm').onsubmit=async e=>{
   const o=Object.fromEntries(new FormData(e.target));
@@ -245,6 +252,7 @@ $('#uNom').textContent=me.nombre||me.cc;
 $('#rolSes').textContent=Auth.ROLES[me.rol].n;
 if(Auth.can('usr_ver'))$('#lnkUsr').hidden=$('#sepUsr').hidden=false;
 if(!canEdit)$('#btnNuevo').hidden=$('#btnImp').hidden=true;
+$('#btnDelAll').hidden=!Auth.can('lic_borrar');
 $('#salir').onclick=e=>{e.preventDefault();Auth.logout()};
 try{data=await Auth.licencias.list()}catch(e){aviso('No se pudieron cargar las licencias.')}
 render();
