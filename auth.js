@@ -160,6 +160,13 @@ async function sendReset(cc){
 const verifyReset=code=>verifyPasswordResetCode(auth,code);
 const confirmReset=(code,pw)=>confirmPasswordReset(auth,code,pw);
 
+async function setEmail(uid,cc,oldEmail,newEmail){
+  if(!can('usr_rol'))throw new Error('permiso');
+  const b=writeBatch(db);
+  b.update(doc(db,'usuarios',uid),{email:newEmail});
+  b.update(doc(db,'cedulas',cc),{email:newEmail,emailNuevo:oldEmail});
+  await b.commit();
+}
 const users={
   async list(){return (await getDocs(collection(db,'usuarios'))).docs.map(d=>({uid:d.id,...d.data()}))},
   update:(uid,patch)=>updateDoc(doc(db,'usuarios',uid),patch)
@@ -178,4 +185,4 @@ const licencias={
 };
 
 export const Auth={ROLES,checks,pwOk,ccOk,emailOk,genPass,ready,me:()=>ME,can,guard,initialized,
-  login,loginMfa,secState,secRefresh,secSendVerify,totpBegin,totpFinish,logout,bootstrap,createUser,sendReset,verifyReset,confirmReset,users,licencias};
+  login,loginMfa,secState,secRefresh,secSendVerify,totpBegin,totpFinish,logout,bootstrap,createUser,sendReset,verifyReset,confirmReset,setEmail,users,licencias};
