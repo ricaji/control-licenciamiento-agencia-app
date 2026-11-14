@@ -40,7 +40,7 @@ label input,label select{color:var(--ink);width:100%}
 <main>
   <div class="bar"><span class="info" id="info"></span><button class="pri" id="nuevo" hidden>+ Nuevo usuario</button></div>
   <div class="tw"><table>
-    <thead><tr><th>Cédula</th><th>Nombres y apellidos</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Cédula</th><th>Nombres</th><th>Apellidos</th><th>Correo</th><th>Rol</th><th>Estado</th><th></th></tr></thead>
     <tbody id="tb"></tbody>
   </table></div>
 </main>
@@ -91,7 +91,7 @@ if(me){
       const rolCell=Auth.can('usr_rol')
         ?`<select data-rol="${u.uid}">${Object.entries(Auth.ROLES).map(([k,x])=>`<option value="${k}"${k===rol?' selected':''}>${x.n}</option>`).join('')}</select>`
         :`<span class="badge">${Auth.ROLES[rol].n}</span>`;
-      return `<tr class="${act?'':'off'}"><td>${esc(u.cc)}${self?' (tú)':''}</td><td>${esc(u.nombre)}</td><td>${esc(u.email)}</td><td>${rolCell}</td>
+      return `<tr class="${act?'':'off'}"><td>${esc(u.cc)}${self?' (tú)':''}</td><td>${esc(u.nombres??u.nombre)}</td><td>${esc(u.apellidos)}</td><td>${esc(u.email)}</td><td>${rolCell}</td>
         <td>${act?'Activo':'Desactivado'}</td><td>
         ${canPw(u)&&act?`<button class="sm" data-pw="${u.uid}">Cambiar contraseña</button>`:''}
         ${Auth.can('usr_clave_admin')?`<button class="sm" data-mfa="${u.uid}">Restablecer 2FA</button>`:''}
